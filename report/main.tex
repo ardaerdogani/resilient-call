@@ -1,0 +1,73 @@
+\documentclass[12pt, a4paper]{report}
+
+\input{preamble}
+
+% ============================================================
+%  Document metadata
+% ============================================================
+\hypersetup{
+    pdftitle={resilient-call: A Retry and Circuit Breaker Component},
+    pdfauthor={Arda Erdoğan},
+    pdfsubject={Component Based Software Engineering — CBSE},
+    pdfkeywords={retry, circuit breaker, resilience, Python, CBSE},
+}
+
+% ============================================================
+%  Document
+% ============================================================
+\begin{document}
+
+% --- Title page ---
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Large\bfseries Component Based Software Engineering\par}
+    \vspace{0.5cm}
+    {\large Laboratory Report\par}
+
+    \vspace{2.5cm}
+    \rule{\linewidth}{0.5pt}\\[0.4cm]
+    {\Huge\bfseries resilient-call\par}
+    \vspace{0.2cm}
+    {\Large A Retry \& Circuit Breaker Component for Python\par}
+    \rule{\linewidth}{0.5pt}
+
+    \vspace{2.5cm}
+
+    \begin{tabular}{rl}
+        \textbf{Author:}      & Arda Erdoğan \\[4pt]
+        \textbf{Language:}    & Python 3.10+  \\[4pt]
+        \textbf{Version:}     & 1.0.0         \\[4pt]
+        \textbf{License:}     & MIT           \\[4pt]
+        \textbf{Date:}        & \today        \\
+    \end{tabular}
+
+    \vfill
+    {\large\itshape Component Based Software Engineering Course\par}
+\end{titlepage}
+
+% --- Front matter ---
+\pagenumbering{roman}
+
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+
+% --- Main matter ---
+\pagenumbering{arabic}
+
+\include{chapters/01_component_description}
+\include{chapters/02_architecture}
+\include{chapters/03_user_documentation}
+\include{chapters/04_competitive_analysis}
+
+% --- Bibliography ---
+\clearpage
+\bibliographystyle{ieeetr}
+\bibliography{references}
+
+\end{document}

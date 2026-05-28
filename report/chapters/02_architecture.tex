@@ -1,0 +1,204 @@
+% ============================================================
+%  Chapter 2 — Component Architecture (Internal)
+% ============================================================
+\chapter{Component Architecture}
+\label{ch:architecture}
+
+This chapter describes the internal architecture of \textbf{resilient-call}.
+The content here is intended for maintainers and contributors, not end-users.
+
+\section{Design Principles}
+\label{sec:design-principles}
+
+The architecture was designed with the following goals in mind:
+
+\begin{itemize}[leftmargin=*, label=\textbullet]
+    \item \textbf{Composability over inheritance.} Retry and circuit-breaker
+          logic are independent objects that \texttt{ResilientExecutor} composes
+          rather than combining in a single monolithic class.  Either mechanism
+          can be used alone.
+    \item \textbf{Zero dependencies.} The entire library relies only on the
+          Python standard library, making installation and auditing
+          straightforward.
+    \item \textbf{Testability.} All state is explicit and accessible through
+          public properties, enabling deterministic unit testing without
+          mocking \texttt{time}.
+    \item \textbf{Thread safety.} Every mutable state transition is protected
+          by a \texttt{threading.Lock}.
+    \item \textbf{Extensibility through callbacks.} Rather than subclassing,
+          callers extend behaviour via \texttt{on\_retry} and
+          \texttt{on\_state\_change} hooks.
+\end{itemize}
+
+\section{Module Structure}
+\label{sec:module-structure}
+
+\begin{figure}[H]
+    \centering
+    \dirtree{%
+        .1 resilient\_call/.
+        .2 \_\_init\_\_.py \DTcomment{public re-exports}.
+        .2 exceptions.py \DTcomment{CircuitBreakerError, RetryExhaustedError}.
+        .2 circuit\_breaker.py \DTcomment{CircuitBreaker, Config, State enum}.
+        .2 retry.py \DTcomment{RetryPolicy, BackoffStrategy enum}.
+        .2 executor.py \DTcomment{ResilientExecutor}.
+        .2 registry.py \DTcomment{CircuitBreakerRegistry + module singleton}.
+        .2 decorators.py \DTcomment{@retry, @circuit\_breaker}.
+    }
+    \caption{Package module layout}
+    \label{fig:module-structure}
+\end{figure}
+
+\section{Class Diagram}
+\label{sec:class-diagram}
+
+Figure~\ref{fig:class-internal} shows the full internal class diagram including
+private members.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{class_diagram_internal}
+    \caption{Internal class diagram — all members}
+    \label{fig:class-internal}
+\end{figure}
+
+\subsection{Class Responsibilities}
+
+\begin{table}[H]
+    \centering
+    \caption{Summary of class responsibilities}
+    \label{tab:class-responsibilities}
+    \begin{tabularx}{\linewidth}{>{\ttfamily}l X}
+        \toprule
+        \textbf{Class} & \textbf{Responsibility} \\
+        \midrule
+        CircuitBreakerState  & Enum of three states: CLOSED, OPEN, HALF\_OPEN. \\
+        CircuitBreakerConfig & Value object holding all tuning parameters. \\
+        CircuitBreaker       & Thread-safe state machine; wraps a callable and tracks failure/success counts. \\
+        BackoffStrategy      & Enum of delay growth algorithms: FIXED, EXPONENTIAL, JITTER. \\
+        RetryPolicy          & Executes a callable up to \texttt{max\_attempts} times with computed delays between attempts. \\
+        ResilientExecutor    & Composes RetryPolicy and CircuitBreaker; applies fallback on final failure. \\
+        CircuitBreakerRegistry & Named store of CircuitBreaker instances; provides a module-level singleton. \\
+        CircuitBreakerError  & Raised when a call is rejected because the circuit is OPEN. \\
+        RetryExhaustedError  & Raised when all retry attempts fail. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{State Diagram}
+\label{sec:state-diagram}
+
+The \texttt{CircuitBreaker} implements a finite state machine with three states.
+Figure~\ref{fig:state-diagram} shows all transitions and their trigger conditions.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\linewidth]{state_diagram}
+    \caption{Circuit Breaker state machine}
+    \label{fig:state-diagram}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{State transition conditions}
+    \label{tab:transitions}
+    \begin{tabular}{llp{7cm}}
+        \toprule
+        \textbf{From} & \textbf{To} & \textbf{Condition} \\
+        \midrule
+        CLOSED    & OPEN      & Consecutive failures $\geq$ \texttt{failure\_threshold} \\
+        OPEN      & HALF\_OPEN & \texttt{timeout} seconds elapsed since opening \\
+        HALF\_OPEN & CLOSED    & Consecutive successes $\geq$ \texttt{success\_threshold} \\
+        HALF\_OPEN & OPEN      & Any single failure (timer resets) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Usage Scenarios — Sequence Diagrams}
+\label{sec:sequence-diagrams}
+
+\subsection{Scenario 1: Successful Call}
+
+The service responds on the first attempt.  The circuit breaker records a success
+and resets the failure counter (Figure~\ref{fig:seq-success}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{seq_success}
+    \caption{Sequence diagram — successful call, no retry needed}
+    \label{fig:seq-success}
+\end{figure}
+
+\subsection{Scenario 2: Transient Failure, Retries Succeed}
+
+The service fails twice with a transient error and recovers on the third attempt.
+Exponential backoff is applied between attempts
+(Figure~\ref{fig:seq-retry}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{seq_retry_success}
+    \caption{Sequence diagram — two failures followed by successful retry}
+    \label{fig:seq-retry}
+\end{figure}
+
+\subsection{Scenario 3: Circuit Open, Fallback Returned}
+
+The circuit breaker has already tripped to OPEN.  Calls are rejected immediately
+without contacting the downstream service; the configured fallback value is
+returned to the caller (Figure~\ref{fig:seq-open}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{seq_circuit_open}
+    \caption{Sequence diagram — circuit OPEN, service bypassed, fallback returned}
+    \label{fig:seq-open}
+\end{figure}
+
+\section{Deployment Diagram}
+\label{sec:deployment-diagram}
+
+\textbf{resilient-call} is a pure library component — it has no server-side
+counterpart and requires no infrastructure beyond a Python 3.10+ runtime
+(Figure~\ref{fig:deployment}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{deployment_diagram}
+    \caption{Deployment diagram — library installed via pip, used inside application server}
+    \label{fig:deployment}
+\end{figure}
+
+Key deployment characteristics:
+
+\begin{itemize}[leftmargin=*, label=\textbullet]
+    \item Distributed as a wheel via PyPI (\texttt{pip install resilient-call}).
+    \item All state is in-process; no external services are required.
+    \item In horizontally scaled deployments each replica holds its own
+          circuit breaker state independently.
+\end{itemize}
+
+\section{Execution Flow}
+\label{sec:execution-flow}
+
+When \texttt{ResilientExecutor.execute(func)} is called the following
+order of operations applies:
+
+\begin{enumerate}[leftmargin=*, label=\arabic*.]
+    \item \textbf{Circuit check.} The \texttt{CircuitBreaker} checks its
+          current state under the lock.  If OPEN, \texttt{CircuitBreakerError}
+          is raised immediately.  If the timeout has elapsed, the state
+          transitions to HALF\_OPEN.
+    \item \textbf{Retry loop.} The \texttt{RetryPolicy} calls \texttt{func}
+          up to \texttt{max\_attempts} times, sleeping between attempts
+          according to the configured \texttt{BackoffStrategy}.
+    \item \textbf{Success recording.} On a successful return, the
+          \texttt{CircuitBreaker} records a success (closing the circuit if
+          in HALF\_OPEN).
+    \item \textbf{Failure recording.} On final failure, the
+          \texttt{CircuitBreaker} records a failure (potentially opening
+          the circuit), and \texttt{RetryExhaustedError} propagates upward.
+    \item \textbf{Fallback.} If a fallback callable is configured on the
+          executor, any propagating exception is caught and the fallback
+          return value is returned to the caller instead.
+\end{enumerate}

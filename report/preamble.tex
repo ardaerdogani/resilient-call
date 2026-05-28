@@ -1,0 +1,117 @@
+% ============================================================
+%  Preamble — packages and global settings
+% ============================================================
+
+% --- Encoding & language ---
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+
+% --- Page layout ---
+\usepackage[
+    a4paper,
+    top=2.5cm, bottom=2.5cm,
+    left=3cm,  right=2.5cm,
+    headheight=14pt
+]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% --- Fonts ---
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% --- Headers & footers ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{resilient-call — CBSE Report}}
+\fancyhead[R]{\small\textit{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Colors ---
+\usepackage[dvipsnames, table]{xcolor}
+\definecolor{codegreen}{rgb}{0.13,0.55,0.13}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.45,0.18,0.6}
+\definecolor{codeblue}{rgb}{0.18,0.36,0.7}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.97}
+\definecolor{linkblue}{RGB}{0,70,127}
+
+% --- Code listings ---
+\usepackage{listings}
+\lstdefinestyle{python}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{codeblue}\bfseries,
+    stringstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=8pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    frame=single,
+    rulecolor=\color{gray!40},
+    xleftmargin=12pt,
+    framexleftmargin=8pt,
+}
+\lstset{style=python}
+
+% --- Figures & tables ---
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+
+% --- Hyperlinks ---
+\usepackage[
+    colorlinks=true,
+    linkcolor=linkblue,
+    citecolor=linkblue,
+    urlcolor=linkblue,
+    bookmarks=true,
+    bookmarksnumbered=true,
+]{hyperref}
+\usepackage{bookmark}
+
+% --- Misc ---
+\usepackage{enumitem}
+\usepackage{mdframed}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings, breakable, skins}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{dirtree}   % for directory trees
+
+% --- Custom environments ---
+\newenvironment{notebox}{%
+    \begin{tcolorbox}[colback=blue!5, colframe=codeblue, title=Note, fonttitle=\bfseries]
+}{%
+    \end{tcolorbox}
+}
+
+\newenvironment{warningbox}{%
+    \begin{tcolorbox}[colback=orange!5, colframe=orange!80!black, title=Warning, fonttitle=\bfseries]
+}{%
+    \end{tcolorbox}
+}
+
+% --- Chapter style ---
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+    {\normalfont\Large\bfseries}
+    {\chaptertitlename\ \thechapter}{12pt}{\LARGE}
+\titlespacing*{\chapter}{0pt}{-20pt}{20pt}

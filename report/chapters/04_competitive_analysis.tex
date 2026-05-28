@@ -1,0 +1,165 @@
+% ============================================================
+%  Chapter 4 — Competitive Analysis
+% ============================================================
+\chapter{Analysis of Similar Components}
+\label{ch:competitive-analysis}
+
+This chapter surveys commercially and open-source components that solve the
+same or overlapping problems as \textbf{resilient-call}, examines how they are
+presented and documented, and uses these findings to evaluate and improve
+this component.
+
+\section{Components Surveyed}
+\label{sec:components-surveyed}
+
+\begin{table}[H]
+    \centering
+    \caption{Overview of surveyed components}
+    \label{tab:competitors}
+    \begin{tabularx}{\linewidth}{>{\ttfamily}l l l X}
+        \toprule
+        \textbf{Name} & \textbf{Language} & \textbf{License} & \textbf{Features} \\
+        \midrule
+        tenacity      & Python & Apache 2.0 & Retry only; decorator + functional API \\
+        pybreaker      & Python & BSD         & Circuit breaker only; basic API \\
+        Resilience4j  & Java   & Apache 2.0 & Retry + CB + bulkhead + rate-limiter + time-limiter \\
+        Polly         & C\#/.NET & BSD       & Retry + CB + timeout + bulkhead + cache + fallback \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Commercial and Open-Source Presentation}
+\label{sec:presentation-research}
+
+\subsection{tenacity (Python)}
+
+\textbf{tenacity}~\cite{tenacity} is the most widely used Python retry library
+(over 20 million monthly PyPI downloads).  Its strengths from a documentation
+perspective:
+
+\begin{itemize}[leftmargin=*, label=\textbullet]
+    \item Concise README with runnable code examples grouped by use case.
+    \item Decorator, context manager, and functional styles all demonstrated.
+    \item \texttt{retry\_if\_exception\_type}, \texttt{retry\_if\_result},
+          and \texttt{wait\_*} composables provide powerful declarative
+          configuration without subclassing.
+    \item \textbf{No circuit breaker} — the library explicitly scopes itself
+          to retry only.
+\end{itemize}
+
+\subsection{pybreaker (Python)}
+
+\textbf{pybreaker}~\cite{pybreaker} provides circuit breaker functionality
+but deliberately omits retry.  Notable characteristics:
+
+\begin{itemize}[leftmargin=*, label=\textbullet]
+    \item Minimal API — only one class (\texttt{CircuitBreaker}) and one
+          decorator.
+    \item Documentation is limited to a single README with one code example.
+    \item Thread-safe, but no async support.
+    \item Supports state listeners (equivalent to \texttt{on\_state\_change}).
+    \item \textbf{No retry} and \textbf{no fallback} mechanism.
+\end{itemize}
+
+\subsection{Resilience4j (Java)}
+
+\textbf{Resilience4j}~\cite{resilience4j} is the de facto standard in the
+Java ecosystem, inspired by Netflix Hystrix.  It sets the documentation
+gold standard:
+
+\begin{itemize}[leftmargin=*, label=\textbullet]
+    \item Dedicated documentation website with separate pages per module.
+    \item Architecture diagrams, state machine diagrams, and event-flow
+          diagrams embedded in the documentation.
+    \item Extensive configuration tables with types, defaults, and constraints.
+    \item Javadoc generated and published alongside the user guide.
+    \item \textbf{Spring Boot autoconfiguration} and metrics integration
+          (Micrometer, Prometheus) documented separately.
+    \item Versioned release notes.
+\end{itemize}
+
+\subsection{Polly (.NET)}
+
+\textbf{Polly}~\cite{polly} provides the richest feature set of all surveyed
+libraries.  Documentation highlights:
+
+\begin{itemize}[leftmargin=*, label=\textbullet]
+    \item GitHub wiki with one page per policy type, linked from the README.
+    \item Policy composition patterns documented with code and narrative.
+    \item Telemetry and resilience events documented, with integration guides
+          for Microsoft.Extensions.Http.
+    \item Migration guides between major versions.
+    \item Community-maintained FAQ and ``anti-patterns'' page.
+\end{itemize}
+
+\section{Documentation Comparison}
+\label{sec:documentation-comparison}
+
+\begin{table}[H]
+    \centering
+    \caption{Documentation feature comparison}
+    \label{tab:doc-comparison}
+    \begin{tabularx}{\linewidth}{X >{\centering\arraybackslash}p{1.8cm} >{\centering\arraybackslash}p{1.8cm} >{\centering\arraybackslash}p{1.8cm} >{\centering\arraybackslash}p{1.8cm} >{\centering\arraybackslash}p{2.2cm}}
+        \toprule
+        \textbf{Feature} & \textbf{tenacity} & \textbf{pybreaker} & \textbf{Resilience4j} & \textbf{Polly} & \textbf{resilient-call} \\
+        \midrule
+        API reference (generated) & \checkmark & -- & \checkmark & \checkmark & \checkmark \\
+        Quickstart ($\leq$ 5 min)  & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+        Configuration table         & --         & --          & \checkmark & \checkmark & \checkmark \\
+        State / architecture diagrams & --       & --          & \checkmark & --         & \checkmark \\
+        Code examples ($\geq$ 3)   & \checkmark & --          & \checkmark & \checkmark & \checkmark \\
+        Changelog                  & \checkmark & \checkmark  & \checkmark & \checkmark & \checkmark \\
+        License stated             & \checkmark & \checkmark  & \checkmark & \checkmark & \checkmark \\
+        Async documented           & \checkmark & --          & \checkmark & \checkmark & \checkmark \\
+        Fallback / degradation     & --         & --          & \checkmark & \checkmark & \checkmark \\
+        Anti-patterns / warnings   & --         & --          & --         & \checkmark & \checkmark \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Findings and Improvements Applied}
+\label{sec:findings}
+
+Based on the research above, the following improvements were made to
+\textbf{resilient-call}:
+
+\begin{enumerate}[leftmargin=*, label=\arabic*.]
+    \item \textbf{Configuration tables} (inspired by Resilience4j and Polly).
+          Every class's parameters are documented in a table with type, default,
+          and description — not just prose.
+
+    \item \textbf{Architecture and state diagrams} (inspired by Resilience4j).
+          pybreaker and tenacity include no diagrams; Resilience4j's
+          state-machine diagram is one of its most cited pages.  Diagrams were
+          produced for the class structure, state machine, and three sequence
+          scenarios.
+
+    \item \textbf{Idempotency warning} (inspired by Polly's anti-patterns
+          page).  A prominently displayed warning was added to the user guide
+          explaining the conditions under which retry is unsafe.
+
+    \item \textbf{5-minute quickstart example} (matching tenacity's
+          approachable README style).  \texttt{examples/quickstart.py} is a
+          self-contained runnable script demonstrating all three usage
+          patterns.
+
+    \item \textbf{Combined retry + circuit breaker} (gap identified in both
+          tenacity and pybreaker).  Neither library offers both mechanisms;
+          users must compose them manually with adapter code.
+          \texttt{ResilientExecutor} solves this directly.
+
+    \item \textbf{Deployment restrictions documented explicitly} (inspired by
+          Polly's multi-host documentation).  The limitation that circuit
+          breaker state is not shared across processes is called out in both
+          the architecture chapter and the user guide.
+\end{enumerate}
+
+\section{Summary}
+\label{sec:competitive-summary}
+
+\textbf{resilient-call} occupies a niche that is currently underserved in the
+Python ecosystem: a single library that provides both retry and circuit-breaker
+functionality in a composable, decorator-friendly API.  The closest equivalent
+in the Java ecosystem is Resilience4j, whose documentation and architecture
+transparency served as the primary benchmark for this component's own
+documentation quality.
